@@ -2,3 +2,52 @@ enviroment: appdev
 
 auth:
   jwt_url: #I will input this later because of security reasons
+
+# rate limits applied per model by the gateway
+# The rate limiter enforces these locally to avoid 429s
+
+limits:
+  max_call_per_min: 30
+  max_token_per_min: 20_000
+  max_token_per_day: 4_000_000
+  daily_token_buffer: 50_000
+
+# HTTP behaviour
+http:
+  timeout_seconds: 60
+  connect_timeout_seconds: 10
+  retry:
+    max_attempts: 3
+    backoff_base_second: 2
+    retry_on_status: [429, 500, 502, 503, 504]
+
+models:
+  - id: xxx
+    name: xxx
+    type: chat
+    provider: xx
+    url: xxx
+    enabled: true
+
+  - id: xxx
+    name: xxx
+    type: chat
+    provider: xx
+    url: xxx
+    enabled: true
+
+  - id: xxx
+    name: xxx
+    type: chat
+    provider: xx
+    url: xxx
+    enabled: true
+
+  - id: xxx
+    name: xxx
+    type: chat
+    provider: xx
+    url: xxx
+    enabled: true
+
+
