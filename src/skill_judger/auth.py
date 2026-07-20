@@ -8,6 +8,9 @@ from pathlib import Path
 
 import requests
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "model_config.yaml"
 
@@ -17,7 +20,12 @@ class AuthError(Exception):
 
 
 def _read_jwt_url(config_path: Path = CONFIG_PATH) -> str:
-    """Fetch the JWT auth URL from model_config.yaml"""
+    """Fetch the JWT auth URL: GENAI_GATEWAY_JWT env var (e.g. from .env) takes
+    priority for fast local testing, falling back to model_config.yaml."""
+    env_url = os.environ.get("GENAI_GATEWAY_JWT")
+    if env_url:
+        return env_url
+
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -58,5 +66,6 @@ if __name__ == "__main__":
     auth_url = _read_jwt_url()
     service_account, password = _read_env_credentials()
     token = get_jwt(auth_url, service_account, password)
+
     print("JWT token:", token)
 
