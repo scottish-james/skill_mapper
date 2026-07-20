@@ -10,5 +10,6 @@ requires-python = ">=3.9"
 authors = [{name = "James Taylor"}]
 readme = "README.md"
 dependencies = [
+    "pyyaml>=6.0.3",
     "requests>=2.32.5",
 ]

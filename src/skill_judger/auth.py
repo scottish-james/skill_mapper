@@ -4,11 +4,27 @@ The JWT tokens lasts for 25hrs.
 It's currently assumed that not analytics run will take over 25hrs.
 """
 import os
+from pathlib import Path
+
 import requests
+import yaml
+
+CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "model_config.yaml"
 
 
 class AuthError(Exception):
     """raise when authentication fails or credentials are missing"""
+
+
+def _read_jwt_url(config_path: Path = CONFIG_PATH) -> str:
+    """Fetch the JWT auth URL from model_config.yaml"""
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    jwt_url = config.get("auth", {}).get("jwt_url")
+    if not jwt_url:
+        raise AuthError(f"Missing auth.jwt_url in {config_path}")
+    return jwt_url
 
 def _read_env_credentials () -> tuple[str, str]:
     """Fetch CyberArk Acount Name and Password from enviroment"""
@@ -39,11 +55,8 @@ def get_jwt(auth_url, service_account, password):
 
 
 if __name__ == "__main__":
-    auth_url = os.environ.get("CYBERARK_JWT_URL")
-    if not auth_url:
-        raise AuthError("Missing CYBERARK_JWT_URL environment variable.")
-
-    service_account, password = _read_env_credentials()
+    auth_url = _read_jwt_url()
+    service_accou password = _read_env_credentials()
     token = get_jwt(auth_url, service_account, password)
     print("JWT token:", token)
 
