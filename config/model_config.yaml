@@ -1,0 +1,4 @@
+enviroment: appdev
+
+auth:
+  jwt_url: #I will input this later because of security reasons

@@ -1,0 +1,11 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "skill-judger"
+version = "0.1.0"
+description = "LLM-based skills taxonomy classifier for uk retail bank job families"
+requires-python = ">=3.9"
+authors = [{name = "James Taylor"}]
+readme = "README.md"
