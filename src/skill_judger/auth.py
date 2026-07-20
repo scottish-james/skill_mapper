@@ -11,7 +11,7 @@ class AuthError(Exception):
     """raise when authentication fails or credentials are missing"""
 
 def _read_env_credentials () -> tuple[str, str]:
-    """Fetch CyberArk Account Name and Password from enviroment"""
+    """Fetch CyberArk Acount Name and Password from enviroment"""
     service_account = os.environ.get("CYBERARK_SERVICE_ACCOUNT")
     password = os.environ.get("CYBERARK_PASSWORD")
     if not service_account or not password:
@@ -29,6 +29,7 @@ def get_jwt(auth_url, service_account, password):
 
     if response.status_code == 200:
         token = response.text.strip()
+        print("Success! you are authenticated")
         return token
 
     raise AuthError(
