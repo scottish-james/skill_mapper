@@ -39,7 +39,6 @@ def _read_env_credentials () -> tuple[str, str]:
     service_account = os.environ.get("CYBERARK_SERVICE_ACCOUNT")
     password = os.environ.get("CYBERARK_PASSWORD")
     if not service_account or not password:
-        print ("ERROR")
         raise AuthError(
             """
             Missing Credientials: Set CYBERARK_SERVICE_ACCOUNT and CYBERARK_PASSWORD
@@ -54,7 +53,6 @@ def get_jwt(auth_url, service_account, password):
 
     if response.status_code == 200:
         token = response.text.strip()
-        print("Success! you are authenticated")
         return token
 
     raise AuthError(
@@ -62,10 +60,9 @@ def get_jwt(auth_url, service_account, password):
     )
 
 
-if __name__ == "__main__":
+def authenticate() -> str:
+    """Run the full auth flow and return a JWT token"""
     auth_url = _read_jwt_url()
     service_account, password = _read_env_credentials()
-    token = get_jwt(auth_url, service_account, password)
-
-    print("JWT token:", token)
+    return get_jwt(auth_url, service_account, password)
 
