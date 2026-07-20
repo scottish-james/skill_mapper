@@ -31,6 +31,7 @@ def classify_row(prompt_config: dict, row: dict) -> dict:
     user_content = prompt_config["user_template"].format(**row)
     response = _client().chat.completions.create(
         model=OPENAI_TEST_MODEL,
+        temperature=0,
         messages=[
             {"role": "system", "content": prompt_config["system_prompt"]},
             {"role": "user", "content": user_content},

@@ -155,3 +155,15 @@ system_prompt: |
 user_template: |
   Skill Name: {skill_name}
   Skill Description: {description}
+
+expected_keys:
+  - customer_service
+  - operations
+  - direct_sales
+  - specialist_advice
+  - consultant_banker_relationship_management
+  - product_and_proposition
+  - customer_journey
+  - marketing
+  - communications
+  - innovation_and_digital

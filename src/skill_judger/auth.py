@@ -4,34 +4,31 @@ The JWT tokens lasts for 25hrs.
 It's currently assumed that not analytics run will take over 25hrs.
 """
 import os
-from pathlib import Path
 
 import requests
-import yaml
 from dotenv import load_dotenv
 
-load_dotenv()
+from skill_judger.config import load_model_config
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "model_config.yaml"
+load_dotenv()
 
 
 class AuthError(Exception):
     """raise when authentication fails or credentials are missing"""
 
 
-def _read_jwt_url(config_path: Path = CONFIG_PATH) -> str:
+def _read_jwt_url() -> str:
     """Fetch the JWT auth URL: GENAI_GATEWAY_JWT env var (e.g. from .env) takes
-    priority for fast local testing, falling back to model_config.yaml."""
+    priority for fast local testing, falling back to model_config.yaml
+    (merged with model_config.local.yaml if present)."""
     env_url = os.environ.get("GENAI_GATEWAY_JWT")
     if env_url:
         return env_url
 
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-
+    config = load_model_config()
     jwt_url = config.get("auth", {}).get("jwt_url")
     if not jwt_url:
-        raise AuthError(f"Missing auth.jwt_url in {config_path}")
+        raise AuthError("Missing auth.jwt_url in model_config.yaml or model_config.local.yaml")
     return jwt_url
 
 def _read_env_credentials () -> tuple[str, str]:

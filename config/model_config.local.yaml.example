@@ -1,0 +1,14 @@
+# Copy to config/model_config.local.yaml and fill in real values.
+# This file is gitignored — anything here overrides model_config.yaml
+# and is never seen by git pulls, pushes, or anyone reading the repo.
+
+auth:
+  jwt_url:
+
+models:
+  - id:
+    name:
+    type: chat
+    provider:
+    url:
+    enabled: true

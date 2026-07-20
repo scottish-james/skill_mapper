@@ -3,3 +3,6 @@
 study_style.md
 .env
 data/
+config/model_config.local.yaml
+the_plan.md
+old_code.py
