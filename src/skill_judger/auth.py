@@ -15,6 +15,7 @@ def _read_env_credentials () -> tuple[str, str]:
     service_account = os.environ.get("CYBERARK_SERVICE_ACCOUNT")
     password = os.environ.get("CYBERARK_PASSWORD")
     if not service_account or not password:
+        print ("ERROR")
         raise AuthError(
             """
             Missing Credientials: Set CYBERARK_SERVICE_ACCOUNT and CYBERARK_PASSWORD
