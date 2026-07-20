@@ -37,3 +37,13 @@ def get_jwt(auth_url, service_account, password):
         f"Failed to get JWT. Status {response.status_code}, response: {response.text}"
     )
 
+
+if __name__ == "__main__":
+    auth_url = os.environ.get("CYBERARK_JWT_URL")
+    if not auth_url:
+        raise AuthError("Missing CYBERARK_JWT_URL environment variable.")
+
+    service_account, password = _read_env_credentials()
+    token = get_jwt(auth_url, service_account, password)
+    print("JWT token:", token)
+
