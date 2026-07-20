@@ -56,7 +56,7 @@ def get_jwt(auth_url, service_account, password):
 
 if __name__ == "__main__":
     auth_url = _read_jwt_url()
-    service_accou password = _read_env_credentials()
+    service_account, password = _read_env_credentials()
     token = get_jwt(auth_url, service_account, password)
     print("JWT token:", token)
 
