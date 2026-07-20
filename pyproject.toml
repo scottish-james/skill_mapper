@@ -9,3 +9,6 @@ description = "LLM-based skills taxonomy classifier for uk retail bank job famil
 requires-python = ">=3.9"
 authors = [{name = "James Taylor"}]
 readme = "README.md"
+dependencies = [
+    "requests>=2.32.5",
+]

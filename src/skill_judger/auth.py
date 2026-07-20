@@ -4,7 +4,11 @@ The JWT tokens lasts for 25hrs.
 It's currently assumed that not analytics run will take over 25hrs.
 """
 import os
+import requests
 
+
+class AuthError(Exception):
+    """raise when authentication fails or credentials are missing"""
 
 def _read_env_credentials () -> tuple[str, str]:
     """Fetch CyberArk Account Name and Password from enviroment"""
@@ -20,6 +24,14 @@ def _read_env_credentials () -> tuple[str, str]:
     return service_account, password
 
 def get_jwt(auth_url, service_account, password):
-    """
-    Get JWT token
-    """
+    """Get JWT token"""
+    response = requests.post(auth_url, auth=(service_account, password))
+
+    if response.status_code == 200:
+        token = response.text.strip()
+        return token
+
+    raise AuthError(
+        f"Failed to get JWT. Status {response.status_code}, response: {response.text}"
+    )
+
