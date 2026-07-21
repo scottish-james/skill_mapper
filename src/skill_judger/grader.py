@@ -13,7 +13,8 @@ MAX_ROW_ATTEMPTS = 3
 
 def load_prompt_config(prompt_path: Path) -> dict:
     """Load a YAML prompt config with 'system_prompt', 'user_template', and
-    an optional 'expected_keys' list used to validate each response."""
+    an optional 'expected_keys' list used to validate each response and
+    enable checkpointing."""
     with open(prompt_path) as f:
         return yaml.safe_load(f)
 
@@ -54,13 +55,29 @@ def _classify_with_retry(classify_row, prompt_config: dict, row: dict) -> dict:
     return {"error": error_value}
 
 
-def grade_rows(classify_row, prompt_path: Path, input_csv: Path, output_csv: Path):
-    """classify_row(prompt_config: dict, row: dict) -> dict of fields to add to that row"""
-    prompt_config = load_prompt_config(prompt_path)
+def _completed_keys(output_csv: Path, key_field: str, fieldnames: list) -> set:
+    """Rows already written from a previous, interrupted run — matched on
+    key_field (the input CSV's first column). Raises if output_csv exists
+    with different columns than this run would produce, rather than
+    silently appending mismatched data."""
+    if not output_csv.exists():
+        return set()
 
-    with open(input_csv, newline="") as f:
-        rows = list(csv.DictReader(f))
+    with open(output_csv, newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames != fieldnames:
+            raise ValueError(
+                f"{output_csv} exists with different columns than expected "
+                f"({reader.fieldnames} vs {fieldnames}). Move or delete it "
+                "before starting a new run."
+            )
+        return {row[key_field] for row in reader}
 
+
+def _grade_rows_no_checkpoint(classify_row, prompt_config: dict, rows: list, output_csv: Path):
+    """Fallback when the prompt config has no expected_keys, so the output
+    schema isn't known upfront — writes everything at once at the end, same
+    as before. No resume support in this mode."""
     output_rows = []
     fieldnames = None
 
@@ -69,7 +86,6 @@ def grade_rows(classify_row, prompt_path: Path, input_csv: Path, output_csv: Pat
         print(f"Grading: {label}")
 
         result = _classify_with_retry(classify_row, prompt_config, row)
-
         combined = {**row, **result}
         output_rows.append(combined)
         if fieldnames is None:
@@ -79,5 +95,61 @@ def grade_rows(classify_row, prompt_path: Path, input_csv: Path, output_csv: Pat
         writer = csv.DictWriter(out, fieldnames=fieldnames or [])
         writer.writeheader()
         writer.writerows(output_rows)
+
+    print(f"Done. Results written to {output_csv}")
+
+
+def grade_rows(classify_row, prompt_path: Path, input_csv: Path, output_csv: Path):
+    """classify_row(prompt_config: dict, row: dict) -> dict of fields to add
+    to that row.
+
+    Checkpointed: each row is written and flushed to output_csv immediately
+    after grading. If interrupted and re-run, rows already present in
+    output_csv (matched on the input CSV's first column) are skipped, so a
+    crash only loses the one row that was in flight. Requires expected_keys
+    in the prompt config to know the output schema upfront; without it,
+    falls back to the old collect-then-write-once behaviour with no resume.
+    """
+    prompt_config = load_prompt_config(prompt_path)
+    expected_keys = prompt_config.get("expected_keys")
+
+    with open(input_csv, newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        input_fieldnames = reader.fieldnames or []
+
+    if not rows:
+        print("No rows to grade.")
+        return
+
+    if expected_keys is None:
+        _grade_rows_no_checkpoint(classify_row, prompt_config, rows, output_csv)
+        return
+
+    key_field = input_fieldnames[0]
+    fieldnames = input_fieldnames + [k for k in expected_keys if k not in input_fieldnames]
+
+    done = _completed_keys(output_csv, key_field, fieldnames)
+    remaining_rows = [row for row in rows if row[key_field] not in done]
+
+    if done:
+        print(f"Resuming: {len(done)} already done, {len(remaining_rows)} remaining.")
+
+    if not remaining_rows:
+        print("All rows already graded.")
+        return
+
+    file_is_new = not output_csv.exists()
+    with open(output_csv, "a", newline="") as out:
+        writer = csv.DictWriter(out, fieldnames=fieldnames)
+        if file_is_new:
+            writer.writeheader()
+
+        for row in remaining_rows:
+            print(f"Grading: {row[key_field]}")
+
+            result = _classify_with_retry(classify_row, prompt_config, row)
+            writer.writerow({**row, **result})
+            out.flush()
 
     print(f"Done. Results written to {output_csv}")
