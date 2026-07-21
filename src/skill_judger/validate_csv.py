@@ -1,16 +1,14 @@
-"""Run this before a real grading pass to catch column-name mismatches,
-UTF-8 BOMs, and wrong delimiters early — with a clear report instead of a
-KeyError buried mid-run.
-
-Usage: uv run python src/skill_judger/validate_csv.py
+"""Pre-flight check: does the input CSV's columns match what the prompt's
+user_template needs? Catches column-name mismatches, UTF-8 BOMs, and wrong
+delimiters early — with a clear report instead of a KeyError buried mid-run.
+Called automatically by orchestrator.py before a real run, and can also be
+run standalone: uv run python src/skill_judger/validate_csv.py
 """
 import csv
 import re
 from pathlib import Path
 
 import yaml
-
-from skill_judger.orchestrator import INPUT_CSV, PROMPT_PATH
 
 
 def _template_fields(user_template: str) -> set:
@@ -22,31 +20,34 @@ def _read_header(csv_path: Path, encoding: str) -> list:
         return next(csv.reader(f), [])
 
 
-def main():
-    print(f"Checking:      {INPUT_CSV}")
-    print(f"Against prompt: {PROMPT_PATH}\n")
+def validate_csv(input_csv: Path, prompt_path: Path, verbose: bool = True) -> bool:
+    """Return True if input_csv has every column prompt_path's user_template
+    needs. Prints a diagnostic report either way when verbose (the default)."""
+    if not input_csv.exists():
+        print(f"FAIL: {input_csv} does not exist.")
+        return False
 
-    if not INPUT_CSV.exists():
-        print(f"FAIL: {INPUT_CSV} does not exist.")
-        return
+    if not prompt_path.exists():
+        print(f"FAIL: {prompt_path} does not exist.")
+        return False
 
-    if not PROMPT_PATH.exists():
-        print(f"FAIL: {PROMPT_PATH} does not exist.")
-        return
-
-    with open(PROMPT_PATH) as f:
+    with open(prompt_path) as f:
         prompt_config = yaml.safe_load(f)
 
     required_fields = _template_fields(prompt_config.get("user_template", ""))
 
-    header_plain = _read_header(INPUT_CSV, encoding="utf-8")
-    header_sig = _read_header(INPUT_CSV, encoding="utf-8-sig")
+    header_plain = _read_header(input_csv, encoding="utf-8")
+    header_sig = _read_header(input_csv, encoding="utf-8-sig")
     has_bom = header_plain != header_sig
+    header = header_sig
 
-    print("Raw header, exact column names (repr'd so hidden characters show):")
-    for col in header_plain:
-        print(f"  {col!r}")
-    print()
+    if verbose:
+        print(f"Checking:       {input_csv}")
+        print(f"Against prompt: {prompt_path}\n")
+        print("Raw header, exact column names (repr'd so hidden characters show):")
+        for col in header_plain:
+            print(f"  {col!r}")
+        print()
 
     if len(header_plain) == 1 and any(c in header_plain[0] for c in ("\t", ";")):
         print(
@@ -55,23 +56,23 @@ def main():
             "will misread every row.\n"
         )
 
-    if has_bom:
+    if has_bom and verbose:
         print(
             "UTF-8 BOM detected at the start of the file. This silently "
             f"turns your first column's real name into {header_plain[0]!r} "
             "instead of what you'd expect. The code needs to read this file "
             "with encoding='utf-8-sig' to strip it.\n"
         )
-    else:
+    elif verbose:
         print("No UTF-8 BOM detected on this file.\n")
 
-    header = header_sig
-    print("Header as the code will see it once BOM-safe reading is used:")
-    for col in header:
-        print(f"  {col!r}")
-    print()
+    if verbose:
+        print("Header as the code will see it once BOM-safe reading is used:")
+        for col in header:
+            print(f"  {col!r}")
+        print()
+        print(f"Prompt's user_template requires these fields: {sorted(required_fields)}")
 
-    print(f"Prompt's user_template requires these fields: {sorted(required_fields)}")
     missing = required_fields - set(header)
 
     if missing:
@@ -79,10 +80,18 @@ def main():
         print(f"CSV actually has: {header}")
         print(
             "\nFix: either rename the CSV's columns to match, or update "
-            f"user_template in {PROMPT_PATH} to use your CSV's real column names."
+            f"user_template in {prompt_path} to use your CSV's real column names."
         )
-    else:
+        return False
+
+    if verbose:
         print("\nPASS: every field the prompt needs is present in the CSV header.")
+    return True
+
+
+def main():
+    from skill_judger.orchestrator import INPUT_CSV, PROMPT_PATH
+    validate_csv(INPUT_CSV, PROMPT_PATH)
 
 
 if __name__ == "__main__":

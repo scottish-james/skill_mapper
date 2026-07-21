@@ -2,6 +2,7 @@ from pathlib import Path
 
 from skill_judger.auth import AuthError
 from skill_judger.grader import grade_rows
+from skill_judger.validate_csv import validate_csv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROMPT_PATH = PROJECT_ROOT / "config" / "prompts" / "grade_rating_prompt.yaml"
@@ -24,6 +25,10 @@ def run_prod():
 
 def main():
     environment = input("Environment (testing/prod): ").strip().lower()
+
+    if not validate_csv(INPUT_CSV, PROMPT_PATH):
+        print("\nAborting: fix the CSV/prompt mismatch above before running.")
+        return
 
     if environment == "testing":
         # dev-only path, see testing_provider.py — remove this branch before prod
