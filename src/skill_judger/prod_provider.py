@@ -30,23 +30,31 @@ def get_token() -> str:
     return _cached_token
 
 
+def _enabled_chat_models(config: dict) -> list:
+    return [
+        m for m in config.get("models", [])
+        if m.get("type") == "chat" and m.get("enabled", True)
+    ]
+
+
 def _get_rotator(config: dict) -> ModelRotator:
     global _rotator
     if _rotator is None:
-        models = [
-            m for m in config.get("models", [])
-            if m.get("type") == "chat" and m.get("enabled", True)
-        ]
-        _rotator = ModelRotator(models, config["limits"])
+        _rotator = ModelRotator(_enabled_chat_models(config), config["limits"])
     return _rotator
 
 
 def _check_daily_budget(config: dict) -> None:
+    """max_token_per_day is a per-model limit from the gateway, not a total
+    for the whole run — so the real budget scales with how many enabled
+    models are actually being rotated across."""
     limits = config["limits"]
-    budget = limits["max_token_per_day"] - limits["daily_token_buffer"]
+    num_models = len(_enabled_chat_models(config))
+    budget = limits["max_token_per_day"] * num_models - limits["daily_token_buffer"]
     if _total_tokens_used >= budget:
         raise StopGrading(
-            f"Daily token budget reached: {_total_tokens_used:,}/{budget:,}"
+            f"Daily token budget reached: {_total_tokens_used:,}/{budget:,} "
+            f"({limits['max_token_per_day']:,} per model x {num_models} models)"
         )
 
 
