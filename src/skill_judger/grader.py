@@ -11,6 +11,12 @@ import yaml
 MAX_ROW_ATTEMPTS = 3
 
 
+class StopGrading(Exception):
+    """Raise from classify_row to stop the whole run immediately (e.g. a
+    daily token budget was exhausted) rather than retrying or erroring just
+    the current row. Propagates straight through retry handling."""
+
+
 def load_prompt_config(prompt_path: Path) -> dict:
     """Load a YAML prompt config with 'system_prompt', 'user_template', and
     an optional 'expected_keys' list used to validate each response and
@@ -44,6 +50,8 @@ def _classify_with_retry(classify_row, prompt_config: dict, row: dict) -> dict:
             if expected_keys is not None:
                 _validate_result(result, expected_keys)
             return result
+        except StopGrading:
+            raise
         except Exception as e:
             last_error = e
             print(f"  Attempt {attempt} failed: {e}")
@@ -85,7 +93,12 @@ def _grade_rows_no_checkpoint(classify_row, prompt_config: dict, rows: list, out
         label = next(iter(row.values()), "<row>")
         print(f"Grading: {label}")
 
-        result = _classify_with_retry(classify_row, prompt_config, row)
+        try:
+            result = _classify_with_retry(classify_row, prompt_config, row)
+        except StopGrading as e:
+            print(f"Stopping: {e}")
+            break
+
         combined = {**row, **result}
         output_rows.append(combined)
         if fieldnames is None:
@@ -148,7 +161,12 @@ def grade_rows(classify_row, prompt_path: Path, input_csv: Path, output_csv: Pat
         for row in remaining_rows:
             print(f"Grading: {row[key_field]}")
 
-            result = _classify_with_retry(classify_row, prompt_config, row)
+            try:
+                result = _classify_with_retry(classify_row, prompt_config, row)
+            except StopGrading as e:
+                print(f"Stopping: {e}")
+                break
+
             writer.writerow({**row, **result})
             out.flush()
 

@@ -38,4 +38,5 @@ def classify_row(prompt_config: dict, row: dict) -> dict:
         ],
     )
 
+
     return json.loads(response.choices[0].message.content)

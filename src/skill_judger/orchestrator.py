@@ -1,21 +1,25 @@
 from pathlib import Path
 
-from skill_judger.auth import AuthError, authenticate
+from skill_judger.auth import AuthError
+from skill_judger.grader import grade_rows
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROMPT_PATH = PROJECT_ROOT / "config" / "prompts" / "grade_rating_prompt.yaml"
 INPUT_CSV = PROJECT_ROOT / "data" / "skills.csv"
-OUTPUT_CSV = PROJECT_ROOT / "data" / "skills_graded.csv"
+OUTPUT_CSV_TESTING = PROJECT_ROOT / "data" / "skills_graded.csv"
+OUTPUT_CSV_PROD = PROJECT_ROOT / "data" / "skills_graded_prod.csv"
 
 
 def run_prod():
+    from skill_judger.prod_provider import classify_row, get_token
+
     try:
-        token = authenticate()
+        get_token()
     except AuthError as e:
         print(f"Authentication failed: {e}")
         return
 
-    print("JWT received, moving to next step")
+    grade_rows(classify_row, PROMPT_PATH, INPUT_CSV, OUTPUT_CSV_PROD)
 
 
 def main():
@@ -23,9 +27,8 @@ def main():
 
     if environment == "testing":
         # dev-only path, see testing_provider.py — remove this branch before prod
-        from skill_judger.grader import grade_rows
         from skill_judger.testing_provider import classify_row
-        grade_rows(classify_row, PROMPT_PATH, INPUT_CSV, OUTPUT_CSV)
+        grade_rows(classify_row, PROMPT_PATH, INPUT_CSV, OUTPUT_CSV_TESTING)
     elif environment == "prod":
         run_prod()
     else:
