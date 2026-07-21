@@ -71,7 +71,7 @@ def _completed_keys(output_csv: Path, key_field: str, fieldnames: list) -> set:
     if not output_csv.exists():
         return set()
 
-    with open(output_csv, newline="") as f:
+    with open(output_csv, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames != fieldnames:
             raise ValueError(
@@ -126,7 +126,7 @@ def grade_rows(classify_row, prompt_path: Path, input_csv: Path, output_csv: Pat
     prompt_config = load_prompt_config(prompt_path)
     expected_keys = prompt_config.get("expected_keys")
 
-    with open(input_csv, newline="") as f:
+    with open(input_csv, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
         input_fieldnames = reader.fieldnames or []
