@@ -90,8 +90,12 @@ def validate_csv(input_csv: Path, prompt_path: Path, verbose: bool = True) -> bo
 
 
 def main():
-    from skill_judger.orchestrator import INPUT_CSV, PROMPT_PATH
-    validate_csv(INPUT_CSV, PROMPT_PATH)
+    from skill_judger.orchestrator import CLASSIFIERS, INPUT_CSV
+
+    for name, classifier in CLASSIFIERS.items():
+        print(f"=== {name} ===")
+        validate_csv(INPUT_CSV, classifier["prompt_path"])
+        print()
 
 
 if __name__ == "__main__":
